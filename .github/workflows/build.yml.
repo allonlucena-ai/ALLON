@@ -1,0 +1,36 @@
+name: Build ALLON APK
+on:
+  workflow_dispatch:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair projeto
+        run: unzip -q ALLON-para-github.zip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Instalar componentes Android
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;29.0.13113456" "cmake;3.31.6"
+      - name: Baixar submódulos
+        working-directory: InterTune-visionos-fix
+        run: |
+          for pair in "ffMetadataEx|https://github.com/OuterTune/ffMetadataEx" "taglib|https://github.com/OuterTune/taglib" "innertubex|https://github.com/MetrolistGroup/innertubex"; do
+            dir="${pair%%|*}"; url="${pair##*|}"
+            rm -rf "$dir"
+            git clone --depth 1 --recurse-submodules "$url" "$dir"
+          done
+      - name: Compilar
+        working-directory: InterTune-visionos-fix
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleCoreDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ALLON-debug-APK
+          path: InterTune-visionos-fix/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
