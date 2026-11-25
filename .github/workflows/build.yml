@@ -17,19 +17,19 @@ jobs:
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;29.0.13113456" "cmake;3.31.6"
-      - name: Baixar submódulos
-        working-directory: InterTune-visionos-fix
+      - name: Baixar submódulos nas versões certas
         run: |
-          for pair in "ffMetadataEx|https://github.com/OuterTune/ffMetadataEx" "taglib|https://github.com/OuterTune/taglib" "innertubex|https://github.com/MetrolistGroup/innertubex"; do
-            dir="${pair%%|*}"; url="${pair##*|}"
-            rm -rf "$dir"
-            git clone --depth 1 --recurse-submodules "$url" "$dir"
+          git clone --depth 1 --branch visionos-fix --recurse-submodules --shallow-submodules https://github.com/ItzSkyeYT/InterTune.git /tmp/upstream
+          for d in ffMetadataEx taglib innertubex; do
+            rm -rf InterTune-visionos-fix/$d
+            cp -r /tmp/upstream/$d InterTune-visionos-fix/$d
+            rm -rf InterTune-visionos-fix/$d/.git
           done
       - name: Compilar
         working-directory: InterTune-visionos-fix
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleCoreDebug --no-daemon
+          ./gradlew assembleCoreDebug --no-daemon --console=plain > build.log 2>&1 || (echo "=== ERRO ==="; grep -n -B2 -A25 "What went wrong" build.log | head -80; grep -n "^e: \|error:" build.log | head -30; exit 1)
       - uses: actions/upload-artifact@v4
         with:
           name: ALLON-debug-APK
